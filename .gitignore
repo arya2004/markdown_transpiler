@@ -25,3 +25,5 @@ flex-*/
 libtool
 m4/
 stamp-*
+
+build
