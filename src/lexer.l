@@ -5,8 +5,22 @@
 
     extern int yylex();
     void token(const char* s);
-    
+
+    FILE *ftokens; // Add file pointer for tokens output
+
+    void init_lexer(){
+        ftokens = fopen("tokens.txt", "w");
+        if(ftokens == NULL){
+            fprintf(stderr, "Error: Unable to open tokens.txt for writing.\n");
+            exit(1);
+        }
+    }
+
+    void close_lexer(){
+        fclose(ftokens);
+    }
 %}
+
 
 ALPA                [a-zA-Z]
 NUM                 [0-9]
@@ -90,6 +104,6 @@ int yywrap(){
 Fuction to print const char* to stdout
 */
 void token(const char* s){
-    printf("%s\n", s);
+    fprintf(ftokens, "%s\n", s);
     return;
 }
