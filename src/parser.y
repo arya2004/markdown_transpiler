@@ -1,9 +1,13 @@
-
 %{
     #include <string>
+    #include <map>
+    #include <fstream>
 
     extern char* yytext;
     std::string* outStr;
+
+    // Declare the symbol table as a map
+    std::map<std::string, int> symbolTable;
 %}
 
 %code requires {
@@ -53,7 +57,15 @@
 convertList: NEWLINE convertList    {$$ = $2;}
         | PARA convertList          {$$ = $2;}
         | ENDLIST convertList       {$$ = $2;}
-        | blocks                    {outStr = $1;}
+        | blocks                    {
+                                        outStr = $1;
+                                        // Output the symbol table to a file
+                                        std::ofstream symFile("symbol_table.txt");
+                                        for(auto it = symbolTable.begin(); it != symbolTable.end(); ++it) {
+                                            symFile << it->first << ": " << it->second << "\n";
+                                        }
+                                        symFile.close();
+                                    }
    
 blocks : block
        | blocks block {
@@ -228,8 +240,17 @@ lines: line
     | lines line            {$$ = new std::string(*$1 + *$2); delete $1; delete $2;}
 
 
-line: TEXT
-    | line TEXT {$$ = new std::string(*$1 + *$2); delete $1; delete $2;}
+line: TEXT { 
+            $$ = $1; 
+            // Insert TEXT into the symbol table
+            symbolTable[*$1]++; 
+          }
+    | line TEXT { 
+                  $$ = new std::string(*$1 + *$2); 
+                  // Insert TEXT into the symbol table
+                  symbolTable[*$2]++; 
+                  delete $1; delete $2; 
+                }
 
 %%
 
@@ -241,7 +262,7 @@ void yyerror(const char *s){
 }
 
 /*
-Interface functiont return outStr
+Interface function to return outStr
 */
 std::string* getHtmlOut(){
     return outStr; 

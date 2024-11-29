@@ -5,6 +5,7 @@
 
 extern int yylex(void);
 extern int yyparse(void);
+FILE* token_file; // Declare the file pointer for the token file
 
 int main(int argc, char* argv[]){
 
@@ -35,6 +36,13 @@ int main(int argc, char* argv[]){
         exit(0);
     }
 
+    // Open the token file for writing
+    token_file = fopen("tokens.txt", "w");
+    if (token_file == NULL) {
+        fprintf(stderr, "Error: Unable to open token file.\n");
+        exit(0);
+    }
+
     extern FILE *yyin;
 
     // mapping lexer input pointer to input file pointer
@@ -60,7 +68,9 @@ int main(int argc, char* argv[]){
     fprintf(fptrout,"</body>\n");
     fprintf(fptrout,"</html>");
 
+    // Close all open files
     fclose(fptrin);
     fclose(fptrout);
+    fclose(token_file); // Close the token file
     return 0;
 }

@@ -4,8 +4,9 @@
     #include "parser.hpp"
 
     extern int yylex();
-    void token(const char* s);
-    
+    void token(const char* s, const char* type);
+
+    extern FILE* token_file; // Declare the file pointer from main.cpp
 %}
 
 ALPA                [a-zA-Z]
@@ -29,54 +30,55 @@ COLON               ":"
 PLUS                "+"
 MINUS               "-"
 DOT                 "."
-BACKSLASH           "\"
+BACKSLASH           "\\"
 
 NEWLINE             "\n"
 TAB                 "\t"
 
 %%
-^{HASH}{SPACE}                                      { token("H1"); return H1; }
-^{HASH}{HASH}{SPACE}                                { token("H2"); return H2; }
-^{HASH}{HASH}{HASH}{SPACE}                          { token("H3"); return H3; }
-^{HASH}{HASH}{HASH}{HASH}{SPACE}                    { token("H4"); return H4; }
-^{HASH}{HASH}{HASH}{HASH}{HASH}{SPACE}              { token("H5"); return H5; }
-^{HASH}{HASH}{HASH}{HASH}{HASH}{HASH}{SPACE}        { token("H6"); return H6; }
 
-{SPACE}{2,}{NEWLINE}                                { token("LINEBREAK"); return LINEBREAK; }
-{NEWLINE}{3,}                                       { token("PARA"); return ENDLIST; }
-{NEWLINE}{NEWLINE}                                  { token("PARA"); return PARA; }                                          
+^{HASH}{SPACE}                                      { token("HASH", "#"); return H1; }
+^{HASH}{HASH}{SPACE}                                { token("HASH", "##"); return H2; }
+^{HASH}{HASH}{HASH}{SPACE}                          { token("HASH", "###"); return H3; }
+^{HASH}{HASH}{HASH}{HASH}{SPACE}                    { token("HASH", "####"); return H4; }
+^{HASH}{HASH}{HASH}{HASH}{HASH}{SPACE}              { token("HASH", "#####"); return H5; }
+^{HASH}{HASH}{HASH}{HASH}{HASH}{HASH}{SPACE}        { token("HASH", "######"); return H6; }
 
-{NEWLINE}{LETTER}                                   {   token("SBREAK");
+{SPACE}{2,}{NEWLINE}                                { token("LINEBREAK", "  "); return LINEBREAK; }
+{NEWLINE}{3,}                                       { token("PARA", "\\n\\n\\n"); return ENDLIST; }
+{NEWLINE}{NEWLINE}                                  { token("PARA", "\\n\\n"); return PARA; }                                          
+
+{NEWLINE}{LETTER}                                   {   token("SBREAK", "NEWLINE+TEXT");
                                                         yylval.strval = new std::string(yytext); 
                                                         yylval.strval->at(0) = ' ';
                                                         return TEXT;
                                                     }
-{NEWLINE}                                           { token("NEWLINE"); return NEWLINE; }
+{NEWLINE}                                           { token("NEWLINE", "\\n"); return NEWLINE; }
 
-{SPACE}{1,}                                         {   token("SPACE");
+{SPACE}{1,}                                         {   token("SPACE", " "); 
                                                         yytext[1] = '\0';
                                                         yylval.strval = new std::string(yytext);
                                                         return TEXT;
                                                     }
-^{NUM}{DOT}{SPACE}                                  { token("ORDERED"); return ORDERED; }
-^{MINUS}{SPACE}                                     { token("UNORDERED"); return UNORDERED; }
+^{NUM}{DOT}{SPACE}                                  { token("ORDERED", "1."); return ORDERED; }
+^{MINUS}{SPACE}                                     { token("UNORDERED", "-"); return UNORDERED; }
 
-{ASTRX}                                             { token("AITALIC"); return AITALIC; }
-{USCORE}                                            { token("UITALIC"); return UITALIC; }
-{ASTRX}{ASTRX}                                      { token("ABOLD"); return ABOLD; }
-{USCORE}{USCORE}                                    { token("UBOLD"); return UBOLD; }
+{ASTRX}                                             { token("AITALIC", "*"); return AITALIC; }
+{USCORE}                                            { token("UITALIC", "_"); return UITALIC; }
+{ASTRX}{ASTRX}                                      { token("ABOLD", "**"); return ABOLD; }
+{USCORE}{USCORE}                                    { token("UBOLD", "__"); return UBOLD; }
 
-{LSQRB}                                             { token("LSQRB"); return LSQRB; }
-{RSQRB}                                             { token("RSQRB"); return RSQRB; }
-{LPAR}                                              { token("LPAR"); return LPAR; }
-{RPAR}                                              { token("RPAR"); return RPAR; }
-{EXCLA}{LSQRB}                                      { token("IMGOPEN"); return IMGOPEN; }
-{TEXT}                                              {   token("TEXT"); 
+{LSQRB}                                             { token("LSQRB", "["); return LSQRB; }
+{RSQRB}                                             { token("RSQRB", "]"); return RSQRB; }
+{LPAR}                                              { token("LPAR", "("); return LPAR; }
+{RPAR}                                              { token("RPAR", ")"); return RPAR; }
+{EXCLA}{LSQRB}                                      { token("IMGOPEN", "!["); return IMGOPEN; }
+{TEXT}                                              {   token("TEXT", yytext); 
                                                         yylval.strval = new std::string(yytext); 
                                                         return TEXT;
                                                     }
 
-.                                                   { token("OTHER"); }
+.                                                   { token("OTHER", yytext); }
 
 %%
 
@@ -87,9 +89,12 @@ int yywrap(){
 }
 
 /*
-Fuction to print const char* to stdout
+Function to print const char* to the token file
 */
-void token(const char* s){
-    printf("%s\n", s);
-    return;
+void token(const char* s, const char* type){
+    if (token_file == NULL) {
+        fprintf(stderr, "Token file not initialized.\n");
+        return;
+    }
+    fprintf(token_file, "%s \t\t %s\n", type, s);
 }
